@@ -1,30 +1,3 @@
-// import { useState } from "react"; // 1. Import useState
-// import { Button } from "@/components/ui/button";
-// import { CreateRoomModal } from "@/components/shared/create-room-modal"; // 2. Import the modal
-
-// export default function Home() {
-//   // 3. Set up the state to track if the modal is open or closed
-//   const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-
-//   // 4. Create the toggle function (fixing the instructor's small typo here)
-//   const toggleCreateModal = () => {
-//     setCreateModalOpen((prevState) => !prevState);
-//   };
-
-//   return (
-//     <div className="flex min-h-screen flex-col items-center justify-center bg-zinc-950 text-white gap-4">
-//       <h1 className="text-4xl font-bold">Welcome to Live Sync</h1>
-
-//       {/* 5. Attach the toggle function to the button click */}
-//       <Button variant="default" size="lg" onClick={toggleCreateModal}>
-//         Create Room
-//       </Button>
-
-//       {/* 6. Render the Modal at the bottom, passing the state as props */}
-//       <CreateRoomModal isOpen={isCreateModalOpen} onClose={toggleCreateModal} />
-//     </div>
-//   );
-// }
 import { useState, useEffect } from "react";
 import { Link } from "react-router-dom"; // React Router's version of Link
 import { Button } from "@/components/ui/button";
@@ -86,9 +59,19 @@ export default function Home() {
                 <h2 className="text-2xl font-bold text-zinc-100 truncate group-hover:text-blue-400 transition-colors">
                   {interview.roomName}
                 </h2>
-                <div className="mt-2 flex items-center gap-2">
+                {/* <div className="mt-2 flex items-center gap-2">
                   <span className="bg-zinc-800 text-zinc-400 text-xs px-2 py-1 rounded">
                     Room ID: {interview.roomId}
+                  </span>
+                </div> */}
+                <div className="mt-3 flex items-center gap-3">
+                  {/* The new dynamic language badge */}
+                  <span className="bg-blue-900/30 text-blue-400 border border-blue-800/50 text-xs px-2.5 py-1 rounded-md uppercase font-bold tracking-wider">
+                    {interview.language || "javascript"}
+                  </span>
+
+                  <span className="bg-zinc-800 text-zinc-400 text-xs px-2 py-1 rounded-md font-mono">
+                    ID: {interview.roomId}
                   </span>
                 </div>
               </div>
