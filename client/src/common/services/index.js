@@ -1,26 +1,33 @@
-// import { axiosInstance } from "@lib/axios-instance.js";
-// export const gatAllInterviews = async () => {
-//   try {
-//     const { status, data } = await axiosInstance.get("/interview");
-//     if (status === 200) {
-//       return data;
-//     }
-//   } catch (err) {
-//     console.log(err);
-//     return [];
-//   }
-// };
-// src/common/services/index.js
-import axiosInstance from "@/lib/axios"; // Your custom axios instance!
+import axiosInstance from "@/lib/axios";
 
-export const getAllInterviews = async () => {
+// Add search and language parameters with empty defaults
+export const getAllInterviews = async (search = "", language = "") => {
   try {
-    const { status, data } = await axiosInstance.get("/interview");
+    // Build the query string dynamically
+    const queryParams = new URLSearchParams();
+    if (search) queryParams.append("search", search);
+    if (language) queryParams.append("language", language);
+
+    // Send the request with the query string attached
+    const url = queryParams.toString()
+      ? `/interview?${queryParams.toString()}`
+      : "/interview";
+
+    const { status, data } = await axiosInstance.get(url);
     if (status === 200) {
       return data;
     }
   } catch (err) {
     console.error("Error fetching interviews:", err);
     return [];
+  }
+};
+export const deleteInterview = async (roomId) => {
+  try {
+    await axiosInstance.delete(`/interview/${roomId}`);
+    return true;
+  } catch (err) {
+    console.error("Error deleting room:", err);
+    return false;
   }
 };

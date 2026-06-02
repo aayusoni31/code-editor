@@ -1,4 +1,4 @@
-// import { Schema, model } from "mongoose";
+import { Schema, model } from "mongoose"; // <-- This is the magic line that was missing!
 
 const interviewSchema = new Schema(
   {
@@ -13,7 +13,6 @@ const interviewSchema = new Schema(
       type: String,
       required: false,
     },
-    // NEW: Tell MongoDB to save the language!
     language: {
       type: String,
       default: "javascript",

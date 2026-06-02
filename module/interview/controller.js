@@ -18,21 +18,37 @@ export const createRoom = async (req, res) => {
   }
 };
 
+// 1. The NEW getRoomList (with search and filters)
 export const getRoomList = async (req, res) => {
   try {
-    const interviews = await Interview.find().lean().exec();
-    // Use .json() here instead of .send()
+    const { search, language } = req.query;
+
+    let filter = {};
+
+    if (search) {
+      filter.roomName = { $regex: search, $options: "i" };
+    }
+
+    if (language) {
+      filter.language = language;
+    }
+
+    const interviews = await Interview.find(filter)
+      .sort({ createdAt: -1 })
+      .lean()
+      .exec();
+
     return res.status(200).json(interviews);
   } catch (err) {
     return res.status(500).send(err.message);
   }
 };
 
+// 2. getRoomById (so the Editor can load code)
 export const getRoomById = async (req, res) => {
   try {
     const id = req.params.id;
 
-    // FIX: We must search by our 6-character roomId, NOT MongoDB's internal ID!
     const interview = await Interview.findOne({ roomId: id }).lean().exec();
 
     if (!interview) {
@@ -44,16 +60,25 @@ export const getRoomById = async (req, res) => {
   }
 };
 
+// 3. saveRoomCode (with language saving)
 export const saveRoomCode = async (req, res) => {
   try {
     const id = req.params.id;
-    // FIX: Grab both the code AND the language from the frontend!
     const { code, language } = req.body;
 
-    // Save both to MongoDB
     await Interview.findOneAndUpdate({ roomId: id }, { code, language });
 
     return res.status(200).send("Code and Language saved successfully");
+  } catch (err) {
+    return res.status(500).send(err.message);
+  }
+};
+export const deleteRoom = async (req, res) => {
+  try {
+    const id = req.params.id;
+    // Find the room by its 6-character ID and delete it
+    await Interview.findOneAndDelete({ roomId: id });
+    return res.status(200).send("Room deleted successfully");
   } catch (err) {
     return res.status(500).send(err.message);
   }

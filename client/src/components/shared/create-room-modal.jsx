@@ -1,71 +1,3 @@
-// import { Button } from "@/components/ui/button";
-// import { useState } from "react";
-// import {
-//   Dialog,
-//   DialogContent,
-//   DialogFooter,
-//   DialogHeader,
-//   DialogTitle,
-// } from "@/components/ui/dialog";
-// import { Field, FieldGroup } from "@/components/ui/field";
-// import { Input } from "@/components/ui/input";
-// import { Label } from "@/components/ui/label";
-// import axiosInstance from "@/lib/axios";
-
-// export function CreateRoomModal({ isOpen, onClose }) {
-//   const [name, setName] = useState("");
-
-//   const handleNameChange = (e) => {
-//     const { value } = e.target;
-//     setName(value);
-//   };
-
-//   const handleSubmit = async (e) => {
-//     e.preventDefault(); // FIX: Stops the page from refreshing when you click submit!
-//     try {
-//       const url = "/interview";
-//       const { status } = await axiosInstance.post(url, { name });
-
-//       if (status === 201) {
-//         onClose();
-//         // NOTE: Later on, the instructor will probably add code here
-//         // to navigate you into the room after it gets created!
-//       }
-//     } catch (err) {
-//       console.error("Error creating room", err);
-//     }
-//   };
-
-//   return (
-//     <Dialog open={isOpen} onOpenChange={onClose}>
-//       <DialogContent className="sm:max-w-sm">
-//         <form onSubmit={handleSubmit}>
-//           <DialogHeader>
-//             <DialogTitle>Create Room</DialogTitle>
-//           </DialogHeader>
-
-//           <FieldGroup className="py-4">
-//             <Field>
-//               <Label htmlFor="name">Name</Label>
-//               <Input
-//                 id="name"
-//                 value={name}
-//                 onChange={handleNameChange}
-//                 placeholder="Enter Room Name"
-//                 name="name"
-//               />
-//             </Field>
-//           </FieldGroup>
-
-//           <DialogFooter>
-//             {/* Make sure type="submit" is here so it triggers the form */}
-//             <Button type="submit">Save changes</Button>
-//           </DialogFooter>
-//         </form>
-//       </DialogContent>
-//     </Dialog>
-//   );
-// }
 import { Button } from "@/components/ui/button";
 import { useState } from "react";
 import { useNavigate } from "react-router-dom"; // 1. Import useNavigate
@@ -94,21 +26,28 @@ export function CreateRoomModal({ isOpen, onClose }) {
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
+      console.log("1. Button clicked, attempting to create room:", name);
+
       const url = "/interview";
+      const response = await axiosInstance.post(url, { name });
 
-      // 3. Grab the 'data' object from the backend response alongside the status
-      const { status, data } = await axiosInstance.post(url, { name });
+      console.log("2. Backend responded with:", response.status, response.data);
 
-      if (status === 201) {
+      // Sometimes Axios treats a successful creation as 200 OR 201, let's accept both!
+      if (response.status === 201 || response.status === 200) {
+        console.log("3. Success! Navigating to room...");
         onClose();
-        // 4. Use the new roomId from the database to change the URL!
-        navigate(`/interview/${data.roomId}`);
+        navigate(`/interview/${response.data.roomId}`);
       }
     } catch (err) {
-      console.error("Error creating room", err);
+      // 4. If it fails, this will print the EXACT reason in bright red in your browser console!
+      console.error(
+        "CRITICAL ERROR CREATING ROOM:",
+        err.response?.data || err.message,
+      );
+      alert("Failed to create room. Check the browser console!");
     }
   };
-
   return (
     <Dialog open={isOpen} onOpenChange={onClose}>
       <DialogContent className="sm:max-w-sm">
