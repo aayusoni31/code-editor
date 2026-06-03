@@ -1,6 +1,14 @@
+import axios from "axios";
 import * as crypto from "node:crypto";
 import Interview from "./schema.js";
-
+import { GoogleGenAI } from "@google/genai";
+const ai = new GoogleGenAI({ apiKey: process.env.GEMINI_API_KEY });
+const JDOODLE_LANGUAGES = {
+  javascript: { lang: "nodejs", version: "4" },
+  python: { lang: "python3", version: "4" },
+  java: { lang: "java", version: "4" },
+  cpp: { lang: "cpp17", version: "1" },
+};
 export const createRoom = async (req, res) => {
   try {
     const roomName = req.body.name;
@@ -81,5 +89,60 @@ export const deleteRoom = async (req, res) => {
     return res.status(200).send("Room deleted successfully");
   } catch (err) {
     return res.status(500).send(err.message);
+  }
+};
+export const fixCodeWithAI = async (req, res) => {
+  try {
+    const { code, language } = req.body;
+
+    const prompt = `
+      You are an expert software engineer. Look at the following ${language} code.
+      Find any bugs, syntax errors, or improvements and fix them.
+      CRITICAL RULE: Return ONLY the raw fixed code. Do not include markdown like \`\`\`javascript.
+      
+      Here is the code:
+      ${code}
+    `;
+
+    // 4. This is the exact "Generate text" method from the documentation!
+    const response = await ai.models.generateContent({
+      model: "gemini-2.5-flash",
+      contents: prompt,
+    });
+
+    const fixedCode = response.text;
+
+    return res.status(200).json({ fixedCode });
+  } catch (err) {
+    console.error("AI Error:", err);
+    return res.status(500).send(err.message);
+  }
+};
+export const executeCode = async (req, res) => {
+  try {
+    const { code, language } = req.body;
+
+    const jConfig = JDOODLE_LANGUAGES[language];
+    if (!jConfig) {
+      return res.status(400).send("Language not supported for execution");
+    }
+
+    // Call the completely free JDoodle API
+    const response = await axios.post("https://api.jdoodle.com/v1/execute", {
+      clientId: process.env.JDOODLE_CLIENT_ID,
+      clientSecret: process.env.JDOODLE_CLIENT_SECRET,
+      script: code,
+      language: jConfig.lang,
+      versionIndex: jConfig.version,
+    });
+
+    // JDoodle returns the result in 'response.data.output'
+    return res.status(200).json({
+      stdout: response.data.output,
+      stderr: response.data.error || null,
+    });
+  } catch (error) {
+    console.error("Execution Error:", error.response?.data || error.message);
+    return res.status(500).send("Failed to execute code");
   }
 };

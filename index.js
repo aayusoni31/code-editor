@@ -10,7 +10,6 @@ import { connectToDatabase } from "./lib/db.js";
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
-// const SOCKET_PORT = process.env.SOCKET_PORT || 3001;
 
 connectToDatabase();
 initSocket(server);

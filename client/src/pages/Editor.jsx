@@ -3,23 +3,27 @@ import { Editor as MonacoEditor } from "@monaco-editor/react";
 import { useParams } from "react-router-dom";
 import socket from "@/lib/socket";
 import { LanguageSelector } from "@/components/shared/language-selector";
-import { Button } from "@/components/ui/button"; // 1. Import your Shadcn button!
-import axiosInstance from "@/lib/axios"; // 2. Import your axios instance!
+import { Button } from "@/components/ui/button";
+import axiosInstance from "@/lib/axios";
 
 export default function Editor() {
   const { id } = useParams();
   const [language, setLanguage] = useState("javascript");
   const [content, setContent] = useState("// Welcome to Live Sync!\n");
-  const [isSaving, setIsSaving] = useState(false); // Tracks the loading state
+  const [isSaving, setIsSaving] = useState(false);
+  const [isFixing, setIsFixing] = useState(false);
+
+  // Terminal States
+  const [output, setOutput] = useState("");
+  const [isRunning, setIsRunning] = useState(false);
+  const [isError, setIsError] = useState(false);
 
   useEffect(() => {
-    // 3. Fetch existing code from MongoDB when you enter the room
     const fetchRoomData = async () => {
       try {
         const { data } = await axiosInstance.get(`/interview/${id}`);
         if (data) {
           if (data.code) setContent(data.code);
-          // NEW: Load the saved language!
           if (data.language) setLanguage(data.language);
         }
       } catch (err) {
@@ -30,14 +34,9 @@ export default function Editor() {
 
     socket.connect();
     socket.emit("join-room", id);
+    socket.on("update-code", (newContent) => setContent(newContent));
 
-    socket.on("update-code", (newContent) => {
-      setContent(newContent);
-    });
-
-    return () => {
-      socket.disconnect();
-    };
+    return () => socket.disconnect();
   }, [id]);
 
   const handleEditorChange = (value) => {
@@ -45,21 +44,9 @@ export default function Editor() {
     socket.emit("code-change", { roomId: id, content: value });
   };
 
-  // 4. The Save Function!
-  // const handleSave = async () => {
-  //   setIsSaving(true);
-  //   try {
-  //     await axiosInstance.put(`/interview/${id}`, { code: content });
-  //     setTimeout(() => setIsSaving(false), 1000); // Visual feedback
-  //   } catch (err) {
-  //     console.error("Error saving code", err);
-  //     setIsSaving(false);
-  //   }
-  // };
   const handleSave = async () => {
     setIsSaving(true);
     try {
-      // NEW: Send the current language state to the backend!
       await axiosInstance.put(`/interview/${id}`, { code: content, language });
       setTimeout(() => setIsSaving(false), 1000);
     } catch (err) {
@@ -67,9 +54,66 @@ export default function Editor() {
       setIsSaving(false);
     }
   };
+
+  const handleAIFix = async () => {
+    setIsFixing(true);
+    try {
+      const response = await axiosInstance.post("/interview/ai/fix", {
+        code: content,
+        language,
+      });
+      if (response.data.fixedCode) {
+        const cleanCode = response.data.fixedCode.trim();
+        setContent(cleanCode);
+        socket.emit("code-change", { roomId: id, content: cleanCode });
+      }
+    } catch (err) {
+      alert("AI fixing failed. Check backend console!");
+    } finally {
+      setIsFixing(false);
+    }
+  };
+
+  const runCode = async () => {
+    if (["html", "css", "json"].includes(language)) {
+      setOutput(
+        `${language.toUpperCase()} cannot be executed in this terminal.`,
+      );
+      setIsError(true);
+      return;
+    }
+
+    setIsRunning(true);
+    setOutput("Executing code...\n");
+    setIsError(false);
+
+    try {
+      const response = await axiosInstance.post("/interview/execute", {
+        code: content,
+        language,
+      });
+      const result = response.data;
+
+      if (result.stderr) {
+        setIsError(true);
+        setOutput(result.stderr);
+      } else {
+        setIsError(false);
+        setOutput(
+          result.stdout || "Code executed successfully with no output.",
+        );
+      }
+    } catch (error) {
+      setIsError(true);
+      setOutput("Failed to execute code. Check backend console.");
+    } finally {
+      setIsRunning(false);
+    }
+  };
+
   return (
-    <main className="flex h-screen w-full flex-col bg-zinc-950 text-white">
-      <header className="flex h-16 items-center justify-between border-b border-zinc-800 px-6">
+    <main className="flex h-screen w-full flex-col bg-zinc-950 text-white overflow-hidden">
+      <header className="flex h-16 shrink-0 items-center justify-between border-b border-zinc-800 px-6">
         <div className="flex items-center gap-4">
           <h1 className="text-xl font-bold text-zinc-100">Live Code Sync</h1>
           <span className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-400">
@@ -82,26 +126,62 @@ export default function Editor() {
             language={language}
             onLanguageChange={setLanguage}
           />
-          {/* 5. The new Save Button */}
+
+          <Button
+            onClick={runCode}
+            disabled={isRunning}
+            className="bg-blue-600 hover:bg-blue-500 text-white font-bold"
+          >
+            {isRunning ? "Running..." : "▶ Run"}
+          </Button>
+
+          <Button
+            onClick={handleAIFix}
+            disabled={isFixing}
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all"
+          >
+            {isFixing ? "✨ Fixing..." : "✨ AI Fix"}
+          </Button>
+
           <Button
             onClick={handleSave}
             disabled={isSaving}
             className="bg-green-600 hover:bg-green-500 text-white font-bold"
           >
-            {isSaving ? "Saving..." : "Save Snippet"}
+            {isSaving ? "Saving..." : "Save"}
           </Button>
         </div>
       </header>
 
-      <div className="flex-grow pt-4">
-        <MonacoEditor
-          height="100%"
-          theme="vs-dark"
-          language={language}
-          value={content}
-          onChange={handleEditorChange}
-          options={{ minimap: { enabled: false }, fontSize: 16 }}
-        />
+      {/* Split Screen Container */}
+      <div className="flex-grow flex flex-col">
+        <div className="h-[70%] pt-4 border-b border-zinc-800">
+          <MonacoEditor
+            height="100%"
+            theme="vs-dark"
+            language={language}
+            value={content}
+            onChange={handleEditorChange}
+            options={{
+              minimap: { enabled: false },
+              fontSize: 16,
+              quickSuggestions: true,
+            }}
+          />
+        </div>
+
+        <div className="h-[30%] bg-[#1e1e1e] p-4 flex flex-col">
+          <h3 className="text-zinc-400 text-sm font-bold uppercase tracking-wider mb-2">
+            Terminal Output
+          </h3>
+          <div
+            className={`flex-grow bg-black rounded-md p-4 font-mono text-sm overflow-y-auto ${isError ? "text-red-400 border border-red-900/50" : "text-green-400"}`}
+          >
+            <pre style={{ whiteSpace: "pre-wrap" }}>
+              {output || 'Click "▶ Run" to see the output here...'}
+            </pre>
+          </div>
+        </div>
       </div>
     </main>
   );
