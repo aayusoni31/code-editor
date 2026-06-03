@@ -6,7 +6,7 @@ import { createServer } from "http";
 import { initSocket } from "./lib/socket.js";
 import interviewRoutes from "./module/interview/route.js";
 import { connectToDatabase } from "./lib/db.js";
-
+import authRoutes from "./module/auth/route.js";
 const app = express();
 const server = createServer(app);
 const PORT = process.env.PORT || 3000;
@@ -20,6 +20,7 @@ app.use(bodyParser.json());
 app.get("/", (req, res) => {
   return res.status(200).send("Server is running");
 });
+app.use("/auth", authRoutes);
 app.use("/interview", interviewRoutes);
 
 server.listen(PORT, () => {

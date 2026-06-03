@@ -1,153 +1,213 @@
-import { useState, useEffect } from "react";
-import { Link } from "react-router-dom";
+import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { CreateRoomModal } from "@/components/shared/create-room-modal";
-import { LanguageSelector } from "@/components/shared/language-selector";
-import { getAllInterviews, deleteInterview } from "@/common/services";
+import { useState, useEffect } from "react";
+import { AuthModal } from "@/components/shared/auth-modal";
 
 export default function Home() {
-  const [isCreateModalOpen, setCreateModalOpen] = useState(false);
-  const [interviews, setInterviews] = useState([]);
+  const navigate = useNavigate();
 
-  // State for our search bar and language filter
-  const [searchTerm, setSearchTerm] = useState("");
-  const [filterLanguage, setFilterLanguage] = useState("");
+  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isLoggedIn, setIsLoggedIn] = useState(false);
 
-  const toggleCreateModal = () => {
-    setCreateModalOpen((prevState) => !prevState);
-  };
-
-  //  Refactored fetch function so we can call it when filters change
-  const fetchRooms = async (search, lang) => {
-    const data = await getAllInterviews(search, lang);
-    if (data) {
-      setInterviews(data);
-    }
-  };
-
-  const handleDelete = async (roomIdToDelete) => {
-    // Optional: Ask the user to confirm before deleting!
-    if (!window.confirm("Are you sure you want to delete this room?")) return;
-
-    const success = await deleteInterview(roomIdToDelete);
-    if (success) {
-      // Instantly remove it from the screen without refreshing the page!
-      setInterviews((prev) =>
-        prev.filter((room) => room.roomId !== roomIdToDelete),
-      );
-    }
-  };
-
-  // Whenever the page loads, OR when searchTerm/filterLanguage changes, fetch new data!
+  // When the page loads, check if the user has a token in their browser
   useEffect(() => {
-    // We use a slight delay (debounce) so it doesn't spam the database on every keystroke
-    const delayDebounceFn = setTimeout(() => {
-      fetchRooms(searchTerm, filterLanguage);
-    }, 300);
+    const token = localStorage.getItem("token");
+    if (token) {
+      setIsLoggedIn(true);
+    }
+  }, []);
 
-    return () => clearTimeout(delayDebounceFn);
-  }, [searchTerm, filterLanguage]);
+  // The Interceptor
+  const handleDashboardClick = () => {
+    if (isLoggedIn) {
+      navigate("/dashboard"); // Let them in!
+    } else {
+      setShowAuthModal(true); // Pop the modal!
+    }
+  };
+
+  // The Logout Function
+  const handleLogout = () => {
+    localStorage.removeItem("token");
+    localStorage.removeItem("user");
+    setIsLoggedIn(false); // Update the screen instantly
+  };
 
   return (
-    <div className="flex min-h-screen flex-col items-center bg-zinc-950 text-white p-10 font-sans">
-      {/* Header Section */}
-      <div className="flex flex-col items-center gap-4 mt-10 mb-8 text-center">
-        <h1 className="text-5xl font-extrabold tracking-tight text-white">
-          Live Code Sync
-        </h1>
-        <p className="text-lg text-zinc-400 max-w-lg">
-          Create a secure, real-time collaborative coding room or join an
-          existing session below.
-        </p>
-        <Button
-          variant="default"
-          size="lg"
-          onClick={toggleCreateModal}
-          className="mt-4 font-semibold"
-        >
-          Create New Room
-        </Button>
-      </div>
+    <div className="min-h-screen bg-zinc-950 text-white font-sans selection:bg-indigo-500/30">
+      {/* 1. NAVBAR */}
+      <nav className="flex items-center justify-between px-8 py-6 border-b border-zinc-800/50 backdrop-blur-md sticky top-0 z-50">
+        <div className="flex items-center gap-2">
+          <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center font-bold text-xl">
+            &lt;/&gt;
+          </div>
+          <span className="text-xl font-bold tracking-tight">SyncSpace</span>
+        </div>
 
-      {/*  The Filter Toolbar */}
-      <div className="w-full max-w-6xl flex flex-col md:flex-row items-center gap-4 mb-8 bg-zinc-900/50 p-4 rounded-xl border border-zinc-800">
-        <Input
-          placeholder="Search rooms by name..."
-          value={searchTerm}
-          onChange={(e) => setSearchTerm(e.target.value)}
-          className="bg-zinc-900 border-zinc-700 text-white flex-grow"
-        />
-
-        {/* We use an empty string "" to represent "All Languages" */}
-        <LanguageSelector
-          language={filterLanguage}
-          onLanguageChange={setFilterLanguage}
-        />
-
-        {/* Clear Filters Button */}
-        {(searchTerm || filterLanguage) && (
-          <Button
-            variant="destructive"
-            onClick={() => {
-              setSearchTerm("");
-              setFilterLanguage("");
-            }}
-          >
-            Clear
-          </Button>
-        )}
-      </div>
-
-      {/* The Dashboard Grid */}
-      <div className="w-full max-w-6xl grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {interviews.length > 0 ? (
-          interviews.map((interview) => (
-            <div
-              key={interview._id}
-              className="group flex flex-col justify-between p-6 rounded-xl border border-zinc-800 bg-zinc-900/50 hover:bg-zinc-800/80 transition-all duration-300 shadow-md hover:shadow-xl hover:border-zinc-600"
-            >
-              <div>
-                <h2 className="text-2xl font-bold text-zinc-100 truncate group-hover:text-blue-400 transition-colors">
-                  {interview.roomName}
-                </h2>
-
-                <div className="mt-3 flex items-center gap-3">
-                  <span className="bg-blue-900/30 text-blue-400 border border-blue-800/50 text-xs px-2.5 py-1 rounded-md uppercase font-bold tracking-wider">
-                    {interview.language || "javascript"}
-                  </span>
-
-                  <span className="bg-zinc-800 text-zinc-400 text-xs px-2 py-1 rounded-md font-mono">
-                    ID: {interview.roomId}
-                  </span>
-                </div>
-              </div>
-
-              <Link
-                to={`/interview/${interview.roomId}`}
-                className="mt-8 flex w-full items-center justify-center rounded-lg bg-white text-zinc-950 px-4 py-2.5 text-sm font-bold transition-transform active:scale-95 hover:bg-zinc-200"
-              >
-                Join Interview
-              </Link>
+        {/* CONDITIONAL NAVBAR BUTTONS */}
+        <div className="flex gap-4">
+          {isLoggedIn ? (
+            <>
               <Button
-                variant="destructive"
-                onClick={() => handleDelete(interview.roomId)}
-                className="py-2.5"
+                variant="ghost"
+                onClick={handleLogout}
+                className="text-zinc-400 hover:text-red-400"
               >
-                Delete
+                Log out
               </Button>
-            </div>
-          ))
-        ) : (
-          <div className="col-span-full flex flex-col items-center justify-center p-12 border border-dashed border-zinc-800 rounded-xl bg-zinc-900/20">
-            <p className="text-zinc-500 text-lg">
-              No active rooms found matching your filters.
+              <Button
+                onClick={() => navigate("/dashboard")}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white"
+              >
+                Dashboard
+              </Button>
+            </>
+          ) : (
+            <>
+              <Button
+                variant="ghost"
+                onClick={() => setShowAuthModal(true)}
+                className="text-zinc-300 hover:text-white"
+              >
+                Log in
+              </Button>
+              <Button
+                onClick={() => setShowAuthModal(true)}
+                className="bg-indigo-600 hover:bg-indigo-500 text-white"
+              >
+                Sign up
+              </Button>
+            </>
+          )}
+        </div>
+      </nav>
+
+      {/* 2. HERO SECTION */}
+      <main className="flex flex-col items-center text-center px-4 pt-24 pb-16 max-w-5xl mx-auto">
+        <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-indigo-500/10 text-indigo-400 border border-indigo-500/20 text-sm mb-8">
+          <span className="relative flex h-2 w-2">
+            <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-indigo-400 opacity-75"></span>
+            <span className="relative inline-flex rounded-full h-2 w-2 bg-indigo-500"></span>
+          </span>
+          Live Collaborative Editing is here
+        </div>
+
+        <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-br from-white to-zinc-500 bg-clip-text text-transparent">
+          Code together. <br /> Debug with AI.
+        </h1>
+
+        <p className="text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
+          The ultimate real-time interview and collaboration platform. Write
+          code, execute it instantly, and let Google Gemini fix your bugs—all in
+          one shared workspace.
+        </p>
+
+        <div className="flex gap-4 mb-16">
+          <Button
+            onClick={handleDashboardClick}
+            className="bg-white text-black hover:bg-zinc-200 text-lg px-8 py-6 font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
+          >
+            Go to Dashboard 🚀
+          </Button>
+        </div>
+
+        {/* 3. HERO VIDEO PLACEHOLDER */}
+        <div className="w-full relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl shadow-indigo-500/10 aspect-video flex items-center justify-center group">
+          <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent z-10 pointer-events-none"></div>
+          <p className="text-zinc-500 flex flex-col items-center gap-4 z-20">
+            <span className="text-4xl">🎥</span>
+            <span className="font-mono text-sm uppercase tracking-widest">
+              Replace with your screen recording
+            </span>
+          </p>
+        </div>
+      </main>
+
+      {/* 4. FEATURES SECTION */}
+      <section className="border-t border-zinc-800/50 bg-zinc-900/20 py-24 px-8">
+        <div className="max-w-6xl mx-auto">
+          <div className="text-center mb-16">
+            <h2 className="text-3xl font-bold mb-4">
+              Everything you need to ace the interview
+            </h2>
+            <p className="text-zinc-400">
+              Built for modern developers and remote teams.
             </p>
           </div>
-        )}
-      </div>
 
-      <CreateRoomModal isOpen={isCreateModalOpen} onClose={toggleCreateModal} />
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl hover:border-blue-500/50 transition-colors">
+              <div className="w-12 h-12 bg-blue-500/10 text-blue-400 rounded-xl flex items-center justify-center text-2xl mb-6">
+                ⚡
+              </div>
+              <h3 className="text-xl font-bold mb-2">Real-Time Sync</h3>
+              <p className="text-zinc-400 leading-relaxed">
+                Watch your peers type in real-time with sub-millisecond latency
+                powered by WebSockets.
+              </p>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl hover:border-purple-500/50 transition-colors">
+              <div className="w-12 h-12 bg-purple-500/10 text-purple-400 rounded-xl flex items-center justify-center text-2xl mb-6">
+                ✨
+              </div>
+              <h3 className="text-xl font-bold mb-2">AI Code Fixer</h3>
+              <p className="text-zinc-400 leading-relaxed">
+                Stuck on a bug? Let our integrated Gemini AI instantly analyze
+                and rewrite your code to perfection.
+              </p>
+            </div>
+
+            <div className="bg-zinc-900 border border-zinc-800 p-8 rounded-2xl hover:border-green-500/50 transition-colors">
+              <div className="w-12 h-12 bg-green-500/10 text-green-400 rounded-xl flex items-center justify-center text-2xl mb-6">
+                ▶️
+              </div>
+              <h3 className="text-xl font-bold mb-2">Live Execution</h3>
+              <p className="text-zinc-400 leading-relaxed">
+                Compile and run JavaScript, Python, Java, and C++ directly in
+                the browser with secure environments.
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      {/* 5. FOOTER */}
+      <footer className="border-t border-zinc-900 py-12 text-center text-zinc-500 text-sm bg-zinc-950">
+        <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between px-8 gap-4">
+          <p>© 2026 SyncSpace. Built with by Aayushi Verma.</p>
+
+          <div className="flex items-center gap-6 font-medium">
+            <a
+              href="https://www.linkedin.com/in/aayushi-verma-518a17280/"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-indigo-400 transition-colors"
+            >
+              LinkedIn
+            </a>
+            <a
+              href="https://github.com/aayusoni31"
+              target="_blank"
+              rel="noreferrer"
+              className="hover:text-indigo-400 transition-colors"
+            >
+              GitHub
+            </a>
+          </div>
+        </div>
+      </footer>
+
+      {/* THE MODAL */}
+      <AuthModal
+        isOpen={showAuthModal}
+        onClose={() => setShowAuthModal(false)}
+        onSuccess={() => {
+          setShowAuthModal(false);
+          setIsLoggedIn(true);
+          navigate("/dashboard");
+        }}
+      />
     </div>
   );
 }
