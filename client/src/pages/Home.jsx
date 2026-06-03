@@ -91,35 +91,36 @@ export default function Home() {
           </span>
           Live Collaborative Editing is here
         </div>
-
         <h1 className="text-5xl md:text-7xl font-extrabold tracking-tight mb-6 bg-gradient-to-br from-white to-zinc-500 bg-clip-text text-transparent">
           Code together. <br /> Debug with AI.
         </h1>
-
         <p className="text-xl text-zinc-400 max-w-2xl mb-10 leading-relaxed">
           The ultimate real-time interview and collaboration platform. Write
           code, execute it instantly, and let Google Gemini fix your bugs—all in
           one shared workspace.
         </p>
-
         <div className="flex gap-4 mb-16">
           <Button
             onClick={handleDashboardClick}
             className="bg-white text-black hover:bg-zinc-200 text-lg px-8 py-6 font-semibold rounded-full shadow-lg hover:shadow-xl transition-all hover:scale-105 active:scale-95"
           >
-            Go to Dashboard 🚀
+            Go to Dashboard
           </Button>
         </div>
-
         {/* 3. HERO VIDEO PLACEHOLDER */}
         <div className="w-full relative rounded-2xl overflow-hidden border border-zinc-800 bg-zinc-900 shadow-2xl shadow-indigo-500/10 aspect-video flex items-center justify-center group">
+          {/* The dark gradient overlay at the bottom */}
           <div className="absolute inset-0 bg-gradient-to-t from-zinc-950 to-transparent z-10 pointer-events-none"></div>
-          <p className="text-zinc-500 flex flex-col items-center gap-4 z-20">
-            <span className="text-4xl">🎥</span>
-            <span className="font-mono text-sm uppercase tracking-widest">
-              Replace with your screen recording
-            </span>
-          </p>
+
+          {/* The actual video player */}
+          <video
+            src="/hero-demo.mp4"
+            autoPlay
+            loop
+            muted
+            playsInline
+            className="w-full h-full object-cover z-0"
+          />
         </div>
       </main>
 
