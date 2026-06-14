@@ -1,15 +1,22 @@
 import axios from "axios";
 
-const BACKEND_URL = import.meta.env.VITE_BACKEND_URL || "http://localhost:3000";
-// Create a custom instance of Axios
-const axiosInstance = axios.create({
-  // This points directly to your Node.js backend
-  baseURL: BACKEND_URL,
+// 1. Point directly to your live Render backend
+const BACKEND_URL = "https://syncspace-sjne.onrender.com";
 
-  // These headers will automatically be attached to every single request
+const axiosInstance = axios.create({
+  baseURL: BACKEND_URL,
   headers: {
     "Content-Type": "application/json",
   },
+});
+
+// 2. Automatically attach the JWT Token so you stay logged in!
+axiosInstance.interceptors.request.use((config) => {
+  const token = localStorage.getItem("token");
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`;
+  }
+  return config;
 });
 
 export default axiosInstance;
