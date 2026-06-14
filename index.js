@@ -18,6 +18,7 @@ app.use(
   cors({
     origin: [
       "http://localhost:5173",
+      "http://localhost:3000",
       "https://code-editor-sooty-pi.vercel.app", // Lets Vercel in!
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
