@@ -14,7 +14,16 @@ const PORT = process.env.PORT || 3000;
 connectToDatabase();
 initSocket(server);
 
-app.use(cors());
+app.use(
+  cors({
+    origin: [
+      "http://localhost:5173",
+      "https://code-editor-sooty-pi.vercel.app", // Lets Vercel in!
+    ],
+    methods: ["GET", "POST", "PUT", "DELETE"],
+    credentials: true,
+  }),
+);
 app.use(bodyParser.json());
 
 app.get("/", (req, res) => {
