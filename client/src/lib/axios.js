@@ -1,6 +1,6 @@
 import axios from "axios";
 
-// 1. Point directly to your live Render backend
+// Point directly to your live Render backend
 const BACKEND_URL = "https://syncspace-sjne.onrender.com";
 
 const axiosInstance = axios.create({
@@ -10,7 +10,7 @@ const axiosInstance = axios.create({
   },
 });
 
-// 2. Automatically attach the JWT Token so you stay logged in!
+// Automatically attach the JWT Token so you stay logged in!
 axiosInstance.interceptors.request.use((config) => {
   const token = localStorage.getItem("token");
   if (token) {
