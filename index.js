@@ -64,7 +64,6 @@ app.use(
     credentials: true,
   }),
 );
-app.options("*", cors());
 
 app.use(bodyParser.json());
 
