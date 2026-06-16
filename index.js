@@ -58,12 +58,13 @@ app.use(
     origin: [
       "http://localhost:5173",
       "http://localhost:3000",
-      "https://code-editor-sooty-pi.vercel.app/",
+      "https://code-editor-sooty-pi.vercel.app",
     ],
     methods: ["GET", "POST", "PUT", "DELETE"],
     credentials: true,
   }),
 );
+app.options("*", cors());
 
 app.use(bodyParser.json());
 
