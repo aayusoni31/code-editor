@@ -34,6 +34,7 @@ afterAll(async () => {
 
 describe("POST /auth/register", () => {
   it("should handle missing required fields", async () => {
+    //  when I send empty body to register, I expect either 400 or 500 back
     const res = await request(app).post("/auth/register").send({});
     // Your controller throws a 500 when fields are missing
     expect([400, 500]).toContain(res.statusCode);

@@ -12,8 +12,8 @@ export default function Editor() {
   const [content, setContent] = useState("// Welcome to Live Sync!\n");
   const [isSaving, setIsSaving] = useState(false);
   const [isFixing, setIsFixing] = useState(false);
+  const [isConnecting, setIsConnecting] = useState(true); // NEW
 
-  // Terminal States
   const [output, setOutput] = useState("");
   const [isRunning, setIsRunning] = useState(false);
   const [isError, setIsError] = useState(false);
@@ -32,11 +32,26 @@ export default function Editor() {
     };
     fetchRoomData();
 
-    socket.connect();
-    socket.emit("join-room", id);
+    socket.on("connect", () => {
+      console.log("Socket connected!", socket.id);
+      setIsConnecting(false);
+      socket.emit("join-room", id); // only emit AFTER connection confirmed
+    });
+
+    socket.on("connect_error", (err) => {
+      console.error("Socket connection failed:", err.message);
+    });
+
     socket.on("update-code", (newContent) => setContent(newContent));
 
-    return () => socket.disconnect();
+    socket.connect(); // NOW connect — only when Editor mounts
+
+    return () => {
+      socket.off("connect"); // ✅ clean up listeners
+      socket.off("connect_error");
+      socket.off("update-code");
+      socket.disconnect();
+    };
   }, [id]);
 
   const handleEditorChange = (value) => {
@@ -82,18 +97,15 @@ export default function Editor() {
       setIsError(true);
       return;
     }
-
     setIsRunning(true);
     setOutput("Executing code...\n");
     setIsError(false);
-
     try {
       const response = await axiosInstance.post("/interview/execute", {
         code: content,
         language,
       });
       const result = response.data;
-
       if (result.stderr) {
         setIsError(true);
         setOutput(result.stderr);
@@ -119,6 +131,12 @@ export default function Editor() {
           <span className="rounded bg-zinc-800 px-2 py-1 text-sm text-zinc-400">
             Room: {id}
           </span>
+          {/* ✅ NEW — show connection status */}
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${isConnecting ? "bg-yellow-900 text-yellow-400" : "bg-green-900 text-green-400"}`}
+          >
+            {isConnecting ? "⏳ Connecting..." : "🟢 Connected"}
+          </span>
         </div>
 
         <div className="flex items-center gap-4">
@@ -126,7 +144,6 @@ export default function Editor() {
             language={language}
             onLanguageChange={setLanguage}
           />
-
           <Button
             onClick={runCode}
             disabled={isRunning}
@@ -134,15 +151,13 @@ export default function Editor() {
           >
             {isRunning ? "Running..." : "▶ Run"}
           </Button>
-
           <Button
             onClick={handleAIFix}
             disabled={isFixing}
-            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold transition-all"
+            className="bg-indigo-600 hover:bg-indigo-500 text-white font-bold"
           >
             {isFixing ? "✨ Fixing..." : "✨ AI Fix"}
           </Button>
-
           <Button
             onClick={handleSave}
             disabled={isSaving}
@@ -153,7 +168,6 @@ export default function Editor() {
         </div>
       </header>
 
-      {/* Split Screen Container */}
       <div className="flex-grow flex flex-col">
         <div className="h-[70%] pt-4 border-b border-zinc-800">
           <MonacoEditor
@@ -169,7 +183,6 @@ export default function Editor() {
             }}
           />
         </div>
-
         <div className="h-[30%] bg-[#1e1e1e] p-4 flex flex-col">
           <h3 className="text-zinc-400 text-sm font-bold uppercase tracking-wider mb-2">
             Terminal Output
